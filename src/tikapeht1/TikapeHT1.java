@@ -2,7 +2,7 @@ package tikapeht1;
 
 /**
  *
- * @author joel.heino95@gmail.com
+ * @author joel
  */
 import java.sql.*;
 import java.util.*;
@@ -16,21 +16,23 @@ public class TikapeHT1 {
 
         Scanner input = new Scanner(System.in);
 
+        //Ohjelma pyytää käyttäjää syöttämään suoritettavan toiminnon (1,2,3,4)
+        //Mikäli käyttäjä antaa jonkin muun syötteen, ohjelman suoritus päättyy.
         while (true) {
             System.out.print("Valitse toiminto: ");
             String toiminto = input.nextLine();
 
             if (toiminto.equals("1")) {
-                toiminto1();
+                opintopisteetVuodelta();
                 System.out.println("");
             } else if (toiminto.equals("2")) {
-                toiminto2();
+                opiskelijanSuoritukset();
                 System.out.println("");
             } else if (toiminto.equals("3")) {
-                toiminto3();
+                keskiarvoKurssilta();
                 System.out.println("");
             } else if (toiminto.equals("4")) {
-                toiminto4();
+                topOpettajatOpMukaan();
                 System.out.println("");
             } else {
                 break;
@@ -39,7 +41,11 @@ public class TikapeHT1 {
 
     }
 
-    public static void toiminto1() throws SQLException {
+    //Tässä, kuten muissakin ohelman metodeissa muodostetaan yhteys satunnaisgeneroitua
+    //kurssidataa sisältävään kurssit.db -tietokantaan JDBC-ajurin avulla.
+    //Metodissa 1 pyydetään käyttäjältä vuotta, jolta halutaan opintopisteiden yhteismäärä.
+    //Parametrisoitu SQL-kysely hakee opintopisteiden yhteismäärän käyttäjän syöttämältä vuodelta.
+    public static void opintopisteetVuodelta() throws SQLException {
         Scanner input = new Scanner(System.in);
         Connection db = DriverManager.getConnection("jdbc:sqlite:kurssit.db");
 
@@ -57,8 +63,6 @@ public class TikapeHT1 {
             //if (r.next() && r.getString("summa")!= null) {    //halutaanko kirjallinen ilmoitus vai vaan 0?
             if (r.next()) {
                 System.out.println("Opintopisteiden määrä: " + r.getInt("summa"));
-            } else {
-                System.out.println("Annetulta vuodelta ei ole suorituksia tietokannassa");
             }
 
         } catch (SQLException e) {
@@ -67,7 +71,8 @@ public class TikapeHT1 {
 
     }
 
-    public static void toiminto2() throws SQLException {
+    //Haetaan käyttäjän syöttämän opiskelijan kaikki opintosuoritukset.
+    public static void opiskelijanSuoritukset() throws SQLException {
         Scanner input = new Scanner(System.in);
         Connection db = DriverManager.getConnection("jdbc:sqlite:kurssit.db");
 
@@ -82,17 +87,13 @@ public class TikapeHT1 {
             if (r1.getInt("opiskelijaTietokannassa") < 1) {
                 System.out.println("Opiskelijaa ei löytynyt");
             } else {
-
+                
                 PreparedStatement p2 = db.prepareStatement("SELECT K.nimi, K.laajuus, S.paivays, S.arvosana\n"
                         + "FROM Opiskelijat O, Kurssit K, Suoritukset S\n"
                         + "WHERE O.id = S.opiskelija_id AND K.id = S.kurssi_id AND O.nimi = ? ORDER BY S.paivays");
                 p2.setString(1, opiskelija);
-
                 ResultSet r2 = p2.executeQuery();
 
-                //if (r.next() == false) {
-                //   System.out.println("Opiskelijaa ei löytynyt");
-                //}
                 while (r2.next()) {
                     System.out.println(r2.getString("nimi") + " " + r2.getInt("laajuus") + " "
                             + r2.getString("paivays") + " " + r2.getInt("arvosana"));
@@ -104,7 +105,9 @@ public class TikapeHT1 {
 
     }
 
-    public static void toiminto3() throws SQLException {
+    //Haetaan keskiarvo käyttäjän syöttämältä kurssilta. Mikäli kurssia ei ole,
+    //käyttäjä saa tästä tulosteen, ja ohjelma siirtyy takaisin main-metodin alkuun.
+    public static void keskiarvoKurssilta() throws SQLException {
         Scanner input = new Scanner(System.in);
         Connection db = DriverManager.getConnection("jdbc:sqlite:kurssit.db");
 
@@ -117,6 +120,7 @@ public class TikapeHT1 {
             //Mikäli syötettyä kurssia ei löydy tietokannasta, tulostetaan tästä tieto käyttäjälle
             //Mikäli kurssi löytyy, siirrytään ohjelman osaan, jossa tehdään syötetyn kurssin
             //keskiarvon laskeva tietokantakysely.
+            
             PreparedStatement p1 = db.prepareStatement("SELECT COUNT(*) AS syoteListalla FROM Kurssit WHERE nimi = ?");
             p1.setString(1, kurssi);
             ResultSet r1 = p1.executeQuery();
@@ -141,13 +145,14 @@ public class TikapeHT1 {
 
     }
 
-    public static void toiminto4() throws SQLException {
+    //Metodissa haetaan top-lista opettajista annettujen opintopisteiden mukaan järjestettynä.
+    //Pyydetään käyttäjältä tulostettavien opettajien lukumäärää. Jos lkm < 1, pyydetään
+    //syöttämään sellainen lukumäärä (yksi tai suurempi), jotta toiminnon mukainen
+    //tulostus olisi mielekäs.
+    public static void topOpettajatOpMukaan() throws SQLException {
         Scanner input = new Scanner(System.in);
         Connection db = DriverManager.getConnection("jdbc:sqlite:kurssit.db");
 
-        //Pyydetään käyttäjältä tulostettavien opettajien lukumäärää. Jos lkm < 1, pyydetään
-        //syöttämään sellainen lukumäärä (yksi tai suurempi), jotta toiminnon mukainen
-        //tulostus olisi mielekäs.
         int lkm = 0;
         while (true) {
             System.out.print("Anna opettajien määrä: ");
@@ -165,18 +170,18 @@ public class TikapeHT1 {
                     + "WHERE O.id = K.opettaja_id AND S.kurssi_id = K.id GROUP BY O.id "
                     + "ORDER BY SUM(K.laajuus) DESC LIMIT ?");
             p.setInt(1, lkm);
-
             ResultSet r = p.executeQuery();
+
             
-            //Tulostetaan top-listalle otsikot
-            if (r.next()) {
-                ResultSetMetaData rsmd = r.getMetaData();
-                System.out.println(rsmd.getColumnName(1) + " " + rsmd.getColumnName(2));
-            }
-            
-            //Tulostetaan käyttäjän syöttämä määrä (x) eniten opintopisteitä antaneita opettajia
+            //Tulostetaan otsikkorivi + käyttäjän syöttämä määrä (x) eniten opintopisteitä antaneita opettajia
+            int rivi = 0;
             while (r.next()) {
-                System.out.println(r.getString("opettaja") + " " + r.getInt("op"));
+                if (rivi == 0) {
+                    ResultSetMetaData rsmd = r.getMetaData();
+                    System.out.println(rsmd.getColumnName(1) + "\t" + rsmd.getColumnName(2));
+                }
+                System.out.println(r.getString("opettaja") + "\t" + r.getInt("op"));
+                rivi++;
             }
 
         } catch (SQLException e) {
